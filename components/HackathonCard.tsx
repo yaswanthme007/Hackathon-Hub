@@ -193,7 +193,7 @@ export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onSta
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{ rotateX, rotateY, transformPerspective: 900, transformStyle: 'preserve-3d' }}
-      className="relative group cursor-default border-spin rounded-2xl"
+      className="relative group cursor-default"
     >
       {/* Mouse-follow glow */}
       <motion.div
