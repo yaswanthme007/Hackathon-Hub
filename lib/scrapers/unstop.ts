@@ -13,11 +13,36 @@ interface UnstopCompetition {
   start_date: string;
   end_date: string;
   is_online: boolean;
+  type: string; // 'offline', 'online', 'hybrid'
   city: string;
   country: string;
   tags: Array<{ name: string }>;
-  type: string;
   slug: string;
+}
+
+const HEADERS = {
+  'Content-Type': 'application/json',
+  Accept: 'application/json',
+  'User-Agent': 'Mozilla/5.0 (compatible; HackathonHub/1.0)',
+  Referer: 'https://unstop.com/hackathons',
+  Origin: 'https://unstop.com',
+};
+
+function extractList(data: unknown): UnstopCompetition[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object') {
+    const d = data as Record<string, unknown>;
+    // Try common Unstop response shapes
+    for (const key of ['data', 'results', 'opportunities', 'hackathons', 'competitions']) {
+      const val = d[key];
+      if (Array.isArray(val) && val.length > 0) return val;
+      if (val && typeof val === 'object') {
+        const inner = extractList(val);
+        if (inner.length > 0) return inner;
+      }
+    }
+  }
+  return [];
 }
 
 export async function scrapeUnstop(): Promise<{ success: boolean; count?: number; error?: string }> {
@@ -25,34 +50,39 @@ export async function scrapeUnstop(): Promise<{ success: boolean; count?: number
     const db = supabaseAdmin();
     let total = 0;
 
-    // Unstop public competitions API
+    // Try primary Unstop API endpoint
     const res = await axios.post(
       'https://unstop.com/api/public/opportunity/search-result',
       {
         opportunity: 'hackathon',
-        status: 'open',
         page: 1,
-        size: 60,
+        size: 80,
         filters: { status: ['open', 'upcoming'] },
       },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'User-Agent': 'Mozilla/5.0 (compatible; HackathonHub/1.0)',
-          Referer: 'https://unstop.com/hackathons',
-        },
-        timeout: 20000,
-      }
+      { headers: HEADERS, timeout: 20000 }
     );
 
-    const data = res.data?.data?.data || res.data?.data || [];
-    const competitions: UnstopCompetition[] = Array.isArray(data) ? data : [];
+    const competitions = extractList(res.data);
 
     for (const c of competitions) {
       if (!c.title) continue;
+
       const sourceUrl = `https://unstop.com/hackathons/${c.slug || c.uid}`;
       const tags = c.tags?.map((t) => t.name) || [];
+
+      // Detect mode: prefer explicit type field, fall back to is_online
+      let mode: 'online' | 'offline' | 'hybrid' = 'online';
+      if (c.type === 'offline' || c.type === 'in-person') {
+        mode = 'offline';
+      } else if (c.type === 'hybrid') {
+        mode = 'hybrid';
+      } else if (c.is_online === false) {
+        mode = 'offline';
+      }
+
+      const location = mode !== 'online'
+        ? [c.city, c.country].filter(Boolean).join(', ') || null
+        : null;
 
       await db.from('hackathons').upsert(
         {
@@ -64,8 +94,8 @@ export async function scrapeUnstop(): Promise<{ success: boolean; count?: number
           organizer: c.organisation_title || null,
           prize_amount: c.prizes || null,
           tags,
-          mode: c.is_online ? 'online' : 'offline',
-          location: !c.is_online ? [c.city, c.country].filter(Boolean).join(', ') || null : null,
+          mode,
+          location,
           participants_count: c.registrations_count || 0,
           registration_deadline: c.application_deadline || null,
           start_date: c.start_date || null,

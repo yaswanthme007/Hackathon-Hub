@@ -12,6 +12,7 @@ interface DevfolioHackathon {
   prize_amount: number;
   total_applications: number;
   is_online: boolean;
+  hybrid?: boolean;       // some hackathons have both online + in-person tracks
   city: string;
   country: string;
   tags: string[];
@@ -51,8 +52,8 @@ export async function scrapeDevfolio(): Promise<{ success: boolean; count?: numb
             source_url: `https://${h.slug}.devfolio.co`,
             prize_amount: h.prize_amount ? `$${h.prize_amount.toLocaleString()}` : null,
             tags: h.tags || [],
-            mode: h.is_online ? 'online' : 'offline',
-            location: h.is_online ? null : [h.city, h.country].filter(Boolean).join(', ') || null,
+            mode: h.hybrid ? 'hybrid' : h.is_online ? 'online' : 'offline',
+            location: (!h.is_online || h.hybrid) ? [h.city, h.country].filter(Boolean).join(', ') || null : null,
             participants_count: h.total_applications || 0,
             registration_deadline: h.registration_deadline || null,
             start_date: h.starts_at || null,
@@ -66,7 +67,7 @@ export async function scrapeDevfolio(): Promise<{ success: boolean; count?: numb
 
       if (hackathons.length < limit) break;
       offset += limit;
-      if (offset > 120) break; // cap at ~120 hackathons
+      if (offset > 400) break; // cap at ~400 hackathons
 
       await new Promise((r) => setTimeout(r, 700));
     }

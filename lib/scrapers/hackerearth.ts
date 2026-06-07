@@ -10,10 +10,16 @@ interface HEChallenge {
   end_utc_timestamp: string;
   organization_name: string;
   prize: string;
-  type: string; // 'HACKATHON'
-  status: string; // 'ONGOING', 'UPCOMING'
+  type: string;
+  status: string;
   tags: string[];
   total_participants: number;
+  // Location fields (present for in-person hackathons)
+  city?: string;
+  country?: string;
+  location?: string;
+  event_type?: string; // 'online', 'offline', 'hybrid'
+  is_online?: boolean;
 }
 
 export async function scrapeHackerEarth(): Promise<{ success: boolean; count?: number; error?: string }> {
@@ -21,7 +27,6 @@ export async function scrapeHackerEarth(): Promise<{ success: boolean; count?: n
     const db = supabaseAdmin();
     let total = 0;
 
-    // HackerEarth has a public challenges listing API
     const res = await axios.get('https://www.hackerearth.com/api/v3/challenges/', {
       params: {
         type: 'hackathon',
@@ -42,6 +47,22 @@ export async function scrapeHackerEarth(): Promise<{ success: boolean; count?: n
       if (!c.title || !c.url) continue;
       const sourceUrl = c.url.startsWith('http') ? c.url : `https://www.hackerearth.com${c.url}`;
 
+      // Detect mode from available fields
+      let mode: 'online' | 'offline' | 'hybrid' = 'online';
+      let location: string | null = null;
+
+      if (c.event_type === 'offline') {
+        mode = 'offline';
+      } else if (c.event_type === 'hybrid') {
+        mode = 'hybrid';
+      } else if (c.is_online === false) {
+        mode = 'offline';
+      }
+
+      if (mode !== 'online') {
+        location = [c.city, c.country].filter(Boolean).join(', ') || c.location || null;
+      }
+
       await db.from('hackathons').upsert(
         {
           title: c.title,
@@ -52,7 +73,8 @@ export async function scrapeHackerEarth(): Promise<{ success: boolean; count?: n
           organizer: c.organization_name || 'HackerEarth',
           prize_amount: c.prize || null,
           tags: c.tags || [],
-          mode: 'online',
+          mode,
+          location,
           participants_count: c.total_participants || 0,
           start_date: c.start_utc_timestamp || null,
           end_date: c.end_utc_timestamp || null,

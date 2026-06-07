@@ -17,8 +17,12 @@ export async function GET(req: NextRequest) {
   const db  = getSupabase();
   let query = db.from('hackathons').select('*', { count: 'exact' });
 
-  // Mode filter
-  if (mode && mode !== 'all') query = query.eq('mode', mode);
+  // Mode filter — "In-Person" shows offline + hybrid since both have physical components
+  if (mode === 'offline') {
+    query = query.or('mode.eq.offline,mode.eq.hybrid');
+  } else if (mode && mode !== 'all') {
+    query = query.eq('mode', mode);
+  }
 
   // Text search on title
   if (search) query = query.ilike('title', `%${search}%`);
