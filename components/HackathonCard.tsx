@@ -223,21 +223,17 @@ export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onSta
         </div>
 
         {/* Content */}
-        <div className="p-4 flex flex-col gap-3">
+        <div className="p-4 flex flex-col gap-3.5">
+
+          {/* Title & organizer */}
           <div>
-            <h3 className="font-bold text-[14px] leading-snug text-white/85 line-clamp-2 group-hover:text-white transition-colors duration-200 mb-0.5">
+            <h3 className="font-bold text-[14px] leading-snug text-white/85 line-clamp-2 group-hover:text-white transition-colors duration-200">
               {hackathon.title}
             </h3>
             {hackathon.organizer && (
-              <p className="text-[11px] text-zinc-600 font-medium">by {hackathon.organizer}</p>
+              <p className="text-[11px] text-zinc-700 mt-1">by {hackathon.organizer}</p>
             )}
           </div>
-
-          {hackathon.description && (
-            <p className="text-[11.5px] text-zinc-500 line-clamp-2 leading-relaxed">
-              {hackathon.description}
-            </p>
-          )}
 
           {/* Tags */}
           {hackathon.tags?.length > 0 && (
@@ -253,47 +249,49 @@ export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onSta
             </div>
           )}
 
+          {/* Prize — standalone prominent row */}
+          {hackathon.prize_amount && (
+            <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl"
+              style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.15)' }}>
+              <Trophy size={12} className="text-amber-500 flex-shrink-0" />
+              <span className="text-sm font-black text-amber-400 tracking-tight">{hackathon.prize_amount}</span>
+              <span className="text-[10px] text-amber-700 ml-auto font-medium">Prize Pool</span>
+            </div>
+          )}
+
           {/* Meta */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {deadlineText && (
-              <div className="flex items-center gap-1.5">
-                <Calendar size={10} className={isDeadlinePast ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-zinc-600'} />
+              <div className="flex items-center gap-2">
+                <Calendar size={11} className={`flex-shrink-0 ${isDeadlinePast ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-zinc-600'}`} />
                 <span className={`text-[11px] font-medium ${isDeadlinePast ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-zinc-500'}`}>
                   {isDeadlinePast ? 'Registration closed' : `Closes ${deadlineText}`}
                 </span>
               </div>
             )}
             {hackathon.location && (
-              <div className="flex items-center gap-1.5">
-                <MapPin size={10} className="text-zinc-600 flex-shrink-0" />
+              <div className="flex items-center gap-2">
+                <MapPin size={11} className="text-zinc-600 flex-shrink-0" />
                 <span className="text-[11px] text-zinc-500 truncate">{hackathon.location}</span>
               </div>
             )}
-            <div className="flex items-center justify-between">
-              {hackathon.participants_count > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <Users size={10} className="text-zinc-600" />
-                  <span className="text-[11px] text-zinc-500">
-                    {hackathon.participants_count >= 1000
-                      ? `${(hackathon.participants_count / 1000).toFixed(1)}k`
-                      : hackathon.participants_count}
-                  </span>
-                </div>
-              )}
-              {hackathon.prize_amount && (
-                <div className="flex items-center gap-1">
-                  <Trophy size={10} className="text-amber-500" />
-                  <span className="text-[11px] font-bold text-amber-400">{hackathon.prize_amount}</span>
-                </div>
-              )}
-            </div>
+            {hackathon.participants_count > 0 && (
+              <div className="flex items-center gap-2">
+                <Users size={11} className="text-zinc-600 flex-shrink-0" />
+                <span className="text-[11px] text-zinc-500">
+                  {hackathon.participants_count >= 1000
+                    ? `${(hackathon.participants_count / 1000).toFixed(1)}k participants`
+                    : `${hackathon.participants_count} participants`}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Deadline bar */}
           {!isDeadlinePast && hackathon.registration_deadline && (
             <div className="h-px rounded-full bg-white/5 overflow-hidden">
               <motion.div
-                className={`h-full rounded-full ${isUrgent ? 'bg-red-500' : 'bg-white/25'}`}
+                className={`h-full rounded-full ${isUrgent ? 'bg-red-500' : 'bg-white/20'}`}
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.max(4, Math.min(100, 100 - (daysLeft ?? 0) * 2))}%` }}
                 transition={{ duration: 0.9, delay: index * 0.055 + 0.3, ease: 'easeOut' }}
@@ -302,42 +300,29 @@ export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onSta
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-2 pt-1.5 border-t border-white/[0.05]">
+          <div className="flex items-center gap-2 pt-0.5 border-t border-white/[0.05]">
             <motion.a
               href={hackathon.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 text-[12px] font-semibold py-2 px-3 rounded-xl transition-all duration-200"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                color: '#e4e4e7',
-              }}
-              whileHover={{
-                background: 'rgba(255,255,255,0.13)',
-                borderColor: 'rgba(255,255,255,0.25)',
-                color: '#fff',
-                scale: 1.02,
-              }}
+              className="flex-1 flex items-center justify-center gap-1.5 text-[12px] font-semibold py-2.5 px-3 rounded-xl transition-all duration-200"
+              style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#e4e4e7' }}
+              whileHover={{ background: 'rgba(255,255,255,0.13)', borderColor: 'rgba(255,255,255,0.25)', color: '#fff', scale: 1.02 }}
               whileTap={{ scale: 0.96 }}
             >
-              <ExternalLink size={10} />
-              Register
+              <ExternalLink size={10} /> Register
             </motion.a>
 
             {isLoggedIn ? (
               <>
                 <ActionBtn
-                  active={userStatus === 'shortlisted'}
-                  activeColor="#ffffff"
-                  icon={Bookmark}
-                  iconFill
+                  active={userStatus === 'shortlisted'} activeColor="#ffffff"
+                  icon={Bookmark} iconFill
                   label={userStatus === 'shortlisted' ? 'Remove shortlist' : 'Shortlist'}
                   onClick={(e) => { e.preventDefault(); onStatusChange(hackathon.id, userStatus === 'shortlisted' ? null : 'shortlisted'); }}
                 />
                 <ActionBtn
-                  active={userStatus === 'registered'}
-                  activeColor="#10b981"
+                  active={userStatus === 'registered'} activeColor="#10b981"
                   icon={CheckCircle}
                   label={userStatus === 'registered' ? 'Unmark registered' : 'Mark registered'}
                   onClick={(e) => { e.preventDefault(); onStatusChange(hackathon.id, userStatus === 'registered' ? null : 'registered'); }}
