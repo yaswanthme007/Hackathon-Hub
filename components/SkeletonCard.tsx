@@ -9,7 +9,7 @@ export default function SkeletonCard({ index }: { index: number }) {
       animate={{ opacity: 1 }}
       transition={{ delay: index * 0.04 }}
       className="rounded-2xl overflow-hidden"
-      style={{ background: '#0e0e1a', border: '1px solid rgba(255,255,255,0.06)' }}
+      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
     >
       {/* Image skeleton */}
       <div className="h-44 skeleton" />

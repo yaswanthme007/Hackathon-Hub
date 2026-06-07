@@ -13,7 +13,6 @@ export default function SearchBar({ value, onChange }: Props) {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ⌘K shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -32,20 +31,20 @@ export default function SearchBar({ value, onChange }: Props) {
   return (
     <motion.div
       className="relative"
-      animate={{ scale: focused ? 1.015 : 1 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      animate={{ scale: focused ? 1.012 : 1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 26 }}
     >
-      {/* Glow ring */}
+      {/* White glow ring */}
       <AnimatePresence>
         {focused && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute -inset-[3px] rounded-[20px] pointer-events-none"
+            className="absolute -inset-[2px] rounded-[20px] pointer-events-none"
             style={{
-              background: 'linear-gradient(135deg, rgba(124,58,237,0.5), rgba(56,189,248,0.3))',
-              filter: 'blur(6px)',
+              background: 'rgba(255,255,255,0.12)',
+              filter: 'blur(8px)',
             }}
           />
         )}
@@ -54,13 +53,12 @@ export default function SearchBar({ value, onChange }: Props) {
       <div
         className="relative flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300"
         style={{
-          background: focused ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${focused ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.09)'}`,
+          background: focused ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
+          border: `1px solid ${focused ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.08)'}`,
         }}
       >
-        {/* Search icon */}
-        <motion.div animate={{ color: focused ? '#a78bfa' : '#52525b' }} transition={{ duration: 0.2 }}>
-          <Search size={18} />
+        <motion.div animate={{ color: focused ? '#fff' : '#3f3f46' }} transition={{ duration: 0.2 }}>
+          <Search size={16} />
         </motion.div>
 
         <input
@@ -71,10 +69,9 @@ export default function SearchBar({ value, onChange }: Props) {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder="Search hackathons, themes, tech stack..."
-          className="flex-1 bg-transparent text-white text-sm placeholder-zinc-600 outline-none"
+          className="flex-1 bg-transparent text-white text-sm placeholder-zinc-700 outline-none"
         />
 
-        {/* Right side */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <AnimatePresence>
             {value && (
@@ -83,19 +80,18 @@ export default function SearchBar({ value, onChange }: Props) {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.7 }}
                 onClick={() => onChange('')}
-                className="w-5 h-5 rounded-full flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
+                className="w-5 h-5 rounded-full flex items-center justify-center text-zinc-600 hover:text-white hover:bg-white/10 transition-all"
                 whileTap={{ scale: 0.85 }}
               >
-                <X size={12} />
+                <X size={11} />
               </motion.button>
             )}
           </AnimatePresence>
 
           {!focused && !value && (
-            <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-zinc-600 font-medium"
+            <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-zinc-700 font-medium"
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <Command size={9} />
-              K
+              <Command size={9} />K
             </div>
           )}
         </div>
