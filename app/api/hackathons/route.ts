@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const sort     = searchParams.get('sort') || 'newest';
   const deadline = searchParams.get('deadline') || 'all';
   const page     = parseInt(searchParams.get('page') || '1');
-  const limit    = 12;
+  const limit    = 24;
   const offset   = (page - 1) * limit;
 
   const db  = getSupabase();

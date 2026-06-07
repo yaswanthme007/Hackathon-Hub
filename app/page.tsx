@@ -10,7 +10,7 @@ import SearchBar from '@/components/SearchBar';
 import FilterBar from '@/components/FilterBar';
 import AnimatedNumber from '@/components/AnimatedNumber';
 import { Hackathon, FilterMode, SortBy, DeadlineFilter } from '@/types';
-import { ChevronLeft, ChevronRight, AlertCircle, ArrowRight, Trophy, Globe, Sparkles, Zap, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, Trophy, Globe, Sparkles, Zap, X, Loader2, LayoutGrid } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 
 // Aceternity-style spotlight that follows cursor across the full page
@@ -94,17 +94,18 @@ export default function HomePage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const debouncedSearch = useDebounce(search, 380);
   const gridRef = useRef<HTMLDivElement>(null);
-  const totalPages = Math.ceil(total / 12);
 
-  const fetchHackathons = useCallback(async () => {
-    setLoading(true);
+  const fetchHackathons = useCallback(async (pageNum: number, append: boolean) => {
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     setError('');
     try {
       const params = new URLSearchParams({
-        page: String(page), sort,
+        page: String(pageNum), sort,
         ...(mode !== 'all' && { mode }),
         ...(debouncedSearch && { search: debouncedSearch }),
         ...(activeTag && { tag: activeTag }),
@@ -113,19 +114,32 @@ export default function HomePage() {
       const res = await fetch(`/api/hackathons?${params}`);
       if (!res.ok) throw new Error('fetch failed');
       const data = await res.json();
-      setHackathons(data.hackathons || []);
+      const items: Hackathon[] = data.hackathons || [];
+      setHackathons((prev) => append ? [...prev, ...items] : items);
       setTotal(data.total || 0);
     } catch {
       setError('Could not load hackathons. Make sure Supabase is configured.');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, [page, sort, mode, debouncedSearch, activeTag, deadline]);
+  }, [sort, mode, debouncedSearch, activeTag, deadline]);
 
-  useEffect(() => { setPage(1); }, [debouncedSearch, mode, sort, activeTag, deadline]);
+  // When filters change → reset list and fetch page 1
+  useEffect(() => {
+    setPage(1);
+    setHackathons([]);
+    fetchHackathons(1, false);
+  }, [fetchHackathons]);
+
   // Clear tag filter when user types in search box
   useEffect(() => { setActiveTag(''); }, [debouncedSearch]);
-  useEffect(() => { fetchHackathons(); }, [fetchHackathons]);
+
+  const loadMore = useCallback(() => {
+    const next = page + 1;
+    setPage(next);
+    fetchHackathons(next, true);
+  }, [page, fetchHackathons]);
 
   useEffect(() => {
     if (!session?.user) { setUserStatusMap({}); return; }
@@ -429,7 +443,7 @@ export default function HomePage() {
                 <p className="text-white font-semibold mb-1">Failed to load</p>
                 <p className="text-zinc-600 text-sm max-w-xs">{error}</p>
               </div>
-              <motion.button onClick={fetchHackathons}
+              <motion.button onClick={() => fetchHackathons(1, false)}
                 className="text-sm text-zinc-400 hover:text-white px-4 py-2 rounded-xl transition-all"
                 style={{ border: '1px solid rgba(255,255,255,0.1)' }}
                 whileTap={{ scale: 0.96 }}>
@@ -465,51 +479,50 @@ export default function HomePage() {
           )}
         </AnimatePresence>
 
-        {/* Pagination */}
-        {totalPages > 1 && !loading && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-            className="flex items-center justify-center gap-2 mt-12">
-            <motion.button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-zinc-500 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition-all"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ChevronLeft size={14} /> Prev
-            </motion.button>
-
-            <div className="flex items-center gap-1.5 px-2">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const p = page <= 3 ? i + 1 : page + i - 2;
-                if (p < 1 || p > totalPages) return null;
-                return (
-                  <motion.button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className="w-9 h-9 rounded-xl text-xs font-bold transition-all"
-                    style={p === page
-                      ? { background: '#fff', color: '#000', border: 'none' }
-                      : { background: 'rgba(255,255,255,0.04)', color: '#52525b', border: '1px solid rgba(255,255,255,0.07)' }
-                    }
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.92 }}
-                  >
-                    {p}
-                  </motion.button>
-                );
-              })}
+        {/* Load More */}
+        {!loading && hackathons.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex flex-col items-center gap-4 mt-14"
+          >
+            {/* Progress bar */}
+            <div className="w-48 h-px rounded-full overflow-hidden"
+              style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <motion.div
+                className="h-full rounded-full bg-white/30"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, (hackathons.length / total) * 100)}%` }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+              />
             </div>
 
-            <motion.button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-zinc-500 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition-all"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Next <ChevronRight size={14} />
-            </motion.button>
+            <p className="text-xs text-zinc-600">
+              Showing <span className="text-white font-semibold">{hackathons.length}</span> of{' '}
+              <span className="text-white font-semibold">{total}</span> hackathons
+            </p>
+
+            {hackathons.length < total && (
+              <motion.button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all disabled:opacity-50"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#e4e4e7' }}
+                whileHover={{ backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.22)', color: '#fff', scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                {loadingMore ? (
+                  <><Loader2 size={14} className="animate-spin" /> Loading…</>
+                ) : (
+                  <><LayoutGrid size={14} /> Load {Math.min(24, total - hackathons.length)} more</>
+                )}
+              </motion.button>
+            )}
+
+            {hackathons.length >= total && total > 0 && (
+              <p className="text-[11px] text-zinc-700">You&apos;ve seen all {total} hackathons</p>
+            )}
           </motion.div>
         )}
 
