@@ -4,7 +4,6 @@ import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from
 import { Calendar, MapPin, Users, Trophy, Bookmark, CheckCircle, ExternalLink, Globe, Building2, Clock } from 'lucide-react';
 import { Hackathon } from '@/types';
 import { formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
-import Image from 'next/image';
 import { useRef, useState, useCallback, useMemo } from 'react';
 
 interface Props {
@@ -153,6 +152,7 @@ function ActionBtn({
 
 export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onStatusChange, onTagClick, index }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [imgError, setImgError] = useState(false);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const glowX = useTransform(mouseX, [-0.5, 0.5], [20, 80]);
@@ -193,7 +193,7 @@ export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onSta
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{ rotateX, rotateY, transformPerspective: 900, transformStyle: 'preserve-3d' }}
-      className="relative group cursor-default"
+      className="relative group cursor-default border-spin rounded-2xl"
     >
       {/* Mouse-follow glow */}
       <motion.div
@@ -225,14 +225,15 @@ export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onSta
 
         {/* Image area */}
         <div className="relative h-44 overflow-hidden">
-          {hackathon.image_url ? (
+          {hackathon.image_url && !imgError ? (
             <>
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={hackathon.image_url}
                 alt={hackathon.title}
-                fill
-                className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                loading="lazy"
+                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                onError={() => setImgError(true)}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/50 to-transparent" />
             </>

@@ -13,11 +13,34 @@ import { Hackathon, FilterMode, SortBy } from '@/types';
 import { ChevronLeft, ChevronRight, AlertCircle, ArrowRight, Trophy, Globe, Sparkles, Zap, X } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 
+// Aceternity-style spotlight that follows cursor across the full page
+function Spotlight() {
+  const mx = useMotionValue(50);
+  const my = useMotionValue(30);
+  const sx = useSpring(mx, { stiffness: 12, damping: 20 });
+  const sy = useSpring(my, { stiffness: 12, damping: 20 });
+  const bg = useTransform([sx, sy], (v: number[]) =>
+    `radial-gradient(1000px circle at ${v[0]}% ${v[1]}%, rgba(255,255,255,0.048) 0%, transparent 50%)`
+  );
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      mx.set((e.clientX / window.innerWidth) * 100);
+      my.set((e.clientY / window.innerHeight) * 100);
+    };
+    window.addEventListener('mousemove', onMove);
+    return () => window.removeEventListener('mousemove', onMove);
+  }, [mx, my]);
+
+  return <motion.div className="fixed inset-0 pointer-events-none z-0" style={{ background: bg }} />;
+}
+
+// Small tight cursor glow for precise element tracking
 function CursorGlow() {
   const x = useMotionValue(-600);
   const y = useMotionValue(-600);
-  const springX = useSpring(x, { stiffness: 60, damping: 18 });
-  const springY = useSpring(y, { stiffness: 60, damping: 18 });
+  const springX = useSpring(x, { stiffness: 80, damping: 20 });
+  const springY = useSpring(y, { stiffness: 80, damping: 20 });
 
   useEffect(() => {
     const move = (e: MouseEvent) => { x.set(e.clientX); y.set(e.clientY); };
@@ -29,12 +52,31 @@ function CursorGlow() {
     <motion.div
       className="fixed pointer-events-none z-0 rounded-full"
       style={{
-        width: 500, height: 500,
-        x: useTransform(springX, (v) => v - 250),
-        y: useTransform(springY, (v) => v - 250),
-        background: 'radial-gradient(circle, rgba(255,255,255,0.033) 0%, transparent 70%)',
+        width: 320, height: 320,
+        x: useTransform(springX, (v) => v - 160),
+        y: useTransform(springY, (v) => v - 160),
+        background: 'radial-gradient(circle, rgba(255,255,255,0.055) 0%, transparent 70%)',
       }}
     />
+  );
+}
+
+// Aceternity Text Generate Effect — words blur-in one by one
+function BlurIn({ text, className, delay = 0 }: { text: string; className?: string; delay?: number }) {
+  return (
+    <span className={className}>
+      {text.split(' ').map((word, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, filter: 'blur(14px)', y: 16 }}
+          animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+          transition={{ delay: delay + i * 0.1, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+          className="inline-block mr-[0.28em]"
+        >
+          {word}
+        </motion.span>
+      ))}
+    </span>
   );
 }
 
@@ -121,6 +163,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen noise" style={{ background: '#000' }}>
+      <Spotlight />
       <CursorGlow />
       <Navbar />
 
@@ -137,14 +180,28 @@ export default function HomePage() {
             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%)' }} />
           <div className="absolute top-[15%] right-[-8%] w-[350px] h-[350px] orb"
             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.02) 0%, transparent 70%)', animationDelay: '-3s' }} />
-          {/* Floating particles */}
-          {[...Array(8)].map((_, i) => (
+          {/* Floating particles — varied sizes */}
+          {[...Array(16)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-px h-px rounded-full bg-white"
-              style={{ left: `${10 + i * 11}%`, top: `${15 + (i % 4) * 20}%` }}
-              animate={{ y: [0, -16, 0], opacity: [0.15, 0.5, 0.15], scale: [1, 1.5, 1] }}
-              transition={{ duration: 3.5 + i * 0.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.4 }}
+              className="absolute rounded-full bg-white"
+              style={{
+                width: i % 4 === 0 ? 2 : 1,
+                height: i % 4 === 0 ? 2 : 1,
+                left: `${5 + i * 5.8}%`,
+                top: `${10 + (i % 6) * 15}%`,
+              }}
+              animate={{
+                y: [0, -(10 + (i % 4) * 5), 0],
+                opacity: [0.08, i % 3 === 0 ? 0.65 : 0.35, 0.08],
+                scale: [1, i % 4 === 0 ? 2.2 : 1.5, 1],
+              }}
+              transition={{
+                duration: 3 + i * 0.4,
+                repeat: Infinity,
+                ease: 'easeInOut',
+                delay: i * 0.22,
+              }}
             />
           ))}
           <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-b from-transparent to-black" />
@@ -152,47 +209,47 @@ export default function HomePage() {
 
         <div className="relative z-10 max-w-4xl mx-auto text-center flex flex-col items-center gap-7">
 
-          {/* Eyebrow */}
+          {/* Eyebrow — spinning border badge */}
           <motion.div
-            initial={{ opacity: 0, y: -16, scale: 0.92 }}
+            initial={{ opacity: 0, y: -16, scale: 0.88 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-semibold"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#a1a1aa' }}
+            className="border-spin rounded-full"
           >
-            <motion.div
-              className="w-1.5 h-1.5 rounded-full bg-white"
-              animate={{ opacity: [1, 0.3, 1] }}
-              transition={{ duration: 1.8, repeat: Infinity }}
-            />
-            Live • {SOURCE_LOGOS.join(', ')} & more
+            <div
+              className="relative inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-semibold"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', color: '#a1a1aa' }}
+            >
+              <motion.div
+                className="w-1.5 h-1.5 rounded-full bg-emerald-400"
+                animate={{ opacity: [1, 0.3, 1], scale: [1, 1.4, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+              Live • {SOURCE_LOGOS.join(' · ')} & more
+            </div>
           </motion.div>
 
-          {/* Headline */}
-          <div className="space-y-1">
-            {['Discover Every', 'Hackathon,', 'One Place.'].map((line, li) => (
-              <motion.h1
-                key={li}
-                className={`block text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] ${
-                  li === 1 ? 'gradient-text' : 'text-white'
-                }`}
-                initial={{ opacity: 0, y: 32 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + li * 0.1, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              >
-                {line}
-              </motion.h1>
-            ))}
+          {/* Headline — Aceternity word-by-word blur-in */}
+          <div className="space-y-0.5">
+            <h1 className="block text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] text-white">
+              <BlurIn text="Discover Every" delay={0.08} />
+            </h1>
+            <h1 className="block text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] gradient-text">
+              <BlurIn text="Hackathon," delay={0.28} />
+            </h1>
+            <h1 className="block text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] text-white">
+              <BlurIn text="One Place." delay={0.44} />
+            </h1>
           </div>
 
           {/* Subtitle */}
           <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45, duration: 0.6 }}
+            initial={{ opacity: 0, filter: 'blur(6px)', y: 12 }}
+            animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+            transition={{ delay: 0.62, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             className="text-zinc-500 text-lg max-w-xl leading-relaxed"
           >
-            Browse hackathons from every major platform. Sign in to shortlist, track registrations, and never miss a deadline.
+            Browse hackathons from every major platform — including Indian platforms like Devfolio, HackerEarth & Unstop. Sign in to track your journey.
           </motion.p>
 
           {/* Search */}
