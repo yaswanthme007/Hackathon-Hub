@@ -37,3 +37,4 @@ export interface UserStats {
 
 export type FilterMode = 'all' | 'online' | 'offline' | 'hybrid';
 export type SortBy = 'newest' | 'deadline' | 'prize' | 'participants';
+export type DeadlineFilter = 'all' | 'today' | 'week' | 'month';

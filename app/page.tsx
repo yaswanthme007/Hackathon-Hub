@@ -9,7 +9,7 @@ import SkeletonCard from '@/components/SkeletonCard';
 import SearchBar from '@/components/SearchBar';
 import FilterBar from '@/components/FilterBar';
 import AnimatedNumber from '@/components/AnimatedNumber';
-import { Hackathon, FilterMode, SortBy } from '@/types';
+import { Hackathon, FilterMode, SortBy, DeadlineFilter } from '@/types';
 import { ChevronLeft, ChevronRight, AlertCircle, ArrowRight, Trophy, Globe, Sparkles, Zap, X } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -90,6 +90,7 @@ export default function HomePage() {
   const [activeTag, setActiveTag] = useState('');
   const [mode, setMode] = useState<FilterMode>('all');
   const [sort, setSort] = useState<SortBy>('newest');
+  const [deadline, setDeadline] = useState<DeadlineFilter>('all');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -107,6 +108,7 @@ export default function HomePage() {
         ...(mode !== 'all' && { mode }),
         ...(debouncedSearch && { search: debouncedSearch }),
         ...(activeTag && { tag: activeTag }),
+        ...(deadline !== 'all' && { deadline }),
       });
       const res = await fetch(`/api/hackathons?${params}`);
       if (!res.ok) throw new Error('fetch failed');
@@ -118,9 +120,9 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [page, sort, mode, debouncedSearch, activeTag]);
+  }, [page, sort, mode, debouncedSearch, activeTag, deadline]);
 
-  useEffect(() => { setPage(1); }, [debouncedSearch, mode, sort, activeTag]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, mode, sort, activeTag, deadline]);
   // Clear tag filter when user types in search box
   useEffect(() => { setActiveTag(''); }, [debouncedSearch]);
   useEffect(() => { fetchHackathons(); }, [fetchHackathons]);
@@ -384,7 +386,7 @@ export default function HomePage() {
         </div>
 
         <div className="mb-7 space-y-3">
-          <FilterBar mode={mode} sort={sort} onModeChange={setMode} onSortChange={setSort} total={total} />
+          <FilterBar mode={mode} sort={sort} deadline={deadline} onModeChange={setMode} onSortChange={setSort} onDeadlineChange={setDeadline} total={total} />
           <AnimatePresence>
             {activeTag && (
               <motion.div

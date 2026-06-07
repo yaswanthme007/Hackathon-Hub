@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from 'framer-motion';
-import { Calendar, MapPin, Users, Trophy, Bookmark, CheckCircle, ExternalLink, Globe, Building2, Clock } from 'lucide-react';
+import { MapPin, Users, Trophy, Bookmark, CheckCircle, ExternalLink, Globe, Building2, Clock } from 'lucide-react';
 import { Hackathon } from '@/types';
 import { formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
 import { useRef, useState, useCallback, useMemo } from 'react';
@@ -175,10 +175,23 @@ export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onSta
     ? differenceInDays(new Date(hackathon.registration_deadline), new Date()) : null;
   const isUrgent = daysLeft !== null && daysLeft <= 3;
 
-  const deadlineText = hackathon.registration_deadline
-    ? isDeadlinePast ? 'Closed'
-    : formatDistanceToNow(new Date(hackathon.registration_deadline), { addSuffix: true })
-    : null;
+  // Human-readable deadline label for the pill
+  const deadlinePillLabel = (() => {
+    if (!hackathon.registration_deadline) return null;
+    if (isDeadlinePast) return 'Closed';
+    if (daysLeft === 0) return 'Closes today!';
+    if (daysLeft !== null && daysLeft <= 30) return `${daysLeft}d left`;
+    // > 30 days: show actual date
+    return new Date(hackathon.registration_deadline).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+  })();
+
+  const deadlinePillStyle = (() => {
+    if (isDeadlinePast) return { bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.25)', color: '#f87171' };
+    if (daysLeft !== null && daysLeft <= 3)  return { bg: 'rgba(239,68,68,0.1)',  border: 'rgba(239,68,68,0.3)',  color: '#fca5a5' };
+    if (daysLeft !== null && daysLeft <= 7)  return { bg: 'rgba(245,158,11,0.09)', border: 'rgba(245,158,11,0.28)', color: '#fcd34d' };
+    if (daysLeft !== null && daysLeft <= 30) return { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.12)', color: '#a1a1aa' };
+    return { bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.08)', color: '#71717a' };
+  })();
 
   const sourceLabel = hackathon.source?.toUpperCase() ?? 'OTHER';
   const prizeAmount = cleanHtml(hackathon.prize_amount);
@@ -333,30 +346,42 @@ export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onSta
             </motion.div>
           )}
 
-          {/* Meta */}
-          <div className="space-y-2">
-            {deadlineText && (
-              <div className="flex items-center gap-2">
-                <Calendar size={11} className={`flex-shrink-0 ${isDeadlinePast ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-zinc-600'}`} />
-                <span className={`text-[11px] font-medium ${isDeadlinePast ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-zinc-500'}`}>
-                  {isDeadlinePast ? 'Registration closed' : `Closes ${deadlineText}`}
-                </span>
-              </div>
+          {/* Meta pills — deadline + location */}
+          <div className="flex flex-wrap gap-1.5">
+            {/* Deadline pill */}
+            {deadlinePillLabel && (
+              <motion.div
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                style={{ background: deadlinePillStyle.bg, border: `1px solid ${deadlinePillStyle.border}`, color: deadlinePillStyle.color }}
+                animate={isUrgent && !isDeadlinePast ? { opacity: [1, 0.6, 1] } : {}}
+                transition={{ duration: 1.6, repeat: Infinity }}
+              >
+                <Clock size={9} className="flex-shrink-0" />
+                {deadlinePillLabel}
+              </motion.div>
             )}
+
+            {/* Location pill — prominent for in-person */}
             {hackathon.location && (
-              <div className="flex items-center gap-2">
-                <MapPin size={11} className="text-zinc-600 flex-shrink-0" />
-                <span className="text-[11px] text-zinc-500 truncate">{hackathon.location}</span>
+              <div
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium truncate max-w-[140px]"
+                style={hackathon.mode === 'offline'
+                  ? { background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#6ee7b7' }
+                  : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#71717a' }}
+              >
+                <MapPin size={9} className="flex-shrink-0" />
+                <span className="truncate">{hackathon.location}</span>
               </div>
             )}
+
+            {/* Participants */}
             {hackathon.participants_count > 0 && (
-              <div className="flex items-center gap-2">
-                <Users size={11} className="text-zinc-600 flex-shrink-0" />
-                <span className="text-[11px] text-zinc-500">
-                  {hackathon.participants_count >= 1000
-                    ? `${(hackathon.participants_count / 1000).toFixed(1)}k participants`
-                    : `${hackathon.participants_count} participants`}
-                </span>
+              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: '#52525b' }}>
+                <Users size={9} className="flex-shrink-0" />
+                {hackathon.participants_count >= 1000
+                  ? `${(hackathon.participants_count / 1000).toFixed(1)}k`
+                  : hackathon.participants_count}
               </div>
             )}
           </div>
