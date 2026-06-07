@@ -23,6 +23,19 @@ const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (compatible; HackathonHub/1.0)',
 };
 
+function stripHtml(html: string | null | undefined): string | null {
+  if (!html) return null;
+  const text = html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#36;/g, '$')
+    .trim();
+  return text || null;
+}
+
 export async function scrapeDevpost(): Promise<{ success: boolean; count?: number; error?: string }> {
   try {
     const pages = [1, 2, 3]; // fetch up to 3 pages = ~150 hackathons
@@ -50,7 +63,7 @@ export async function scrapeDevpost(): Promise<{ success: boolean; count?: numbe
             source: 'devpost',
             source_url: c.url,
             organizer: c.organization_name || null,
-            prize_amount: c.prize_amount || null,
+            prize_amount: stripHtml(c.prize_amount),
             tags,
             mode,
             location: c.location || null,

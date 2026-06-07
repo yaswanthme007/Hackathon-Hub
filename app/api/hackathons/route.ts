@@ -15,8 +15,10 @@ export async function GET(req: NextRequest) {
   const db = getSupabase();
   let query = db.from('hackathons').select('*', { count: 'exact' });
 
+  const tag = searchParams.get('tag');
   if (mode && mode !== 'all') query = query.eq('mode', mode);
   if (search) query = query.ilike('title', `%${search}%`);
+  if (tag) query = query.contains('tags', [tag]);
 
   if (sort === 'deadline') query = query.order('registration_deadline', { ascending: true, nullsFirst: false });
   else if (sort === 'participants') query = query.order('participants_count', { ascending: false });

@@ -10,7 +10,7 @@ import SearchBar from '@/components/SearchBar';
 import FilterBar from '@/components/FilterBar';
 import AnimatedNumber from '@/components/AnimatedNumber';
 import { Hackathon, FilterMode, SortBy } from '@/types';
-import { ChevronLeft, ChevronRight, AlertCircle, ArrowRight, Trophy, Globe, Sparkles, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertCircle, ArrowRight, Trophy, Globe, Sparkles, Zap, X } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 
 function CursorGlow() {
@@ -45,6 +45,7 @@ export default function HomePage() {
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [userStatusMap, setUserStatusMap] = useState<Record<string, 'registered' | 'shortlisted'>>({});
   const [search, setSearch] = useState('');
+  const [activeTag, setActiveTag] = useState('');
   const [mode, setMode] = useState<FilterMode>('all');
   const [sort, setSort] = useState<SortBy>('newest');
   const [page, setPage] = useState(1);
@@ -63,6 +64,7 @@ export default function HomePage() {
         page: String(page), sort,
         ...(mode !== 'all' && { mode }),
         ...(debouncedSearch && { search: debouncedSearch }),
+        ...(activeTag && { tag: activeTag }),
       });
       const res = await fetch(`/api/hackathons?${params}`);
       if (!res.ok) throw new Error('fetch failed');
@@ -74,9 +76,11 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [page, sort, mode, debouncedSearch]);
+  }, [page, sort, mode, debouncedSearch, activeTag]);
 
-  useEffect(() => { setPage(1); }, [debouncedSearch, mode, sort]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, mode, sort, activeTag]);
+  // Clear tag filter when user types in search box
+  useEffect(() => { setActiveTag(''); }, [debouncedSearch]);
   useEffect(() => { fetchHackathons(); }, [fetchHackathons]);
 
   useEffect(() => {
@@ -105,6 +109,13 @@ export default function HomePage() {
       }
     } catch { setUserStatusMap(prev); }
   }, [session, userStatusMap]);
+
+  const handleTagClick = useCallback((tag: string) => {
+    setSearch('');
+    setActiveTag(tag);
+    setPage(1);
+    gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const scrollToGrid = () => gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -315,8 +326,31 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mb-7">
+        <div className="mb-7 space-y-3">
           <FilterBar mode={mode} sort={sort} onModeChange={setMode} onSortChange={setSort} total={total} />
+          <AnimatePresence>
+            {activeTag && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="flex items-center gap-2"
+              >
+                <span className="text-[11px] text-zinc-600">Tag:</span>
+                <motion.button
+                  onClick={() => { setActiveTag(''); setPage(1); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', color: '#e4e4e7' }}
+                  whileHover={{ backgroundColor: 'rgba(255,255,255,0.12)', color: '#fff' }}
+                  whileTap={{ scale: 0.94 }}
+                >
+                  {activeTag}
+                  <X size={10} className="opacity-60" />
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <AnimatePresence mode="wait">
@@ -364,6 +398,7 @@ export default function HomePage() {
                   userStatus={userStatusMap[h.id] || null}
                   isLoggedIn={!!session}
                   onStatusChange={handleStatusChange}
+                  onTagClick={handleTagClick}
                   index={i}
                 />
               ))}
