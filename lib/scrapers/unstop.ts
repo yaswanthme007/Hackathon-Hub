@@ -56,7 +56,7 @@ export async function scrapeUnstop(): Promise<{ success: boolean; count?: number
       {
         opportunity: 'hackathon',
         page: 1,
-        size: 80,
+        size: 150,
         filters: { status: ['open', 'upcoming'] },
       },
       { headers: HEADERS, timeout: 20000 }

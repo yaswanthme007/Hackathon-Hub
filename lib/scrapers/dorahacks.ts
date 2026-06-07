@@ -27,7 +27,7 @@ export async function scrapeDoraHacks(): Promise<{ success: boolean; count?: num
 
     // DoraHacks public API
     const res = await axios.get('https://dorahacks.io/api/hackathon/list', {
-      params: { limit: 100, offset: 0, status: 'open,upcoming' },
+      params: { limit: 50, offset: 0, status: 'open,upcoming' },
       headers: {
         Accept: 'application/json',
         'User-Agent': 'Mozilla/5.0 (compatible; HackathonHub/1.0)',
