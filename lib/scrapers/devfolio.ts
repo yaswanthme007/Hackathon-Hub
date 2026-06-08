@@ -67,7 +67,7 @@ export async function scrapeDevfolio(): Promise<{ success: boolean; count?: numb
 
       if (hackathons.length < limit) break;
       offset += limit;
-      if (offset > 400) break; // cap at ~400 hackathons
+      if (offset > 200) break; // cap at ~200 hackathons
 
       await new Promise((r) => setTimeout(r, 700));
     }

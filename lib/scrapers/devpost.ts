@@ -38,7 +38,7 @@ function stripHtml(html: string | null | undefined): string | null {
 
 export async function scrapeDevpost(): Promise<{ success: boolean; count?: number; error?: string }> {
   try {
-    const pages = [1, 2, 3]; // fetch up to 3 pages = ~150 hackathons
+    const pages = [1, 2]; // fetch up to 2 pages = ~100 hackathons
     let total = 0;
     const db = supabaseAdmin();
 
