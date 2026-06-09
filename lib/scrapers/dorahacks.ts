@@ -24,45 +24,55 @@ export async function scrapeDoraHacks(): Promise<{ success: boolean; count?: num
   try {
     const db = supabaseAdmin();
     let total = 0;
+    const limit = 50;
+    let offset = 0;
 
-    // DoraHacks public API
-    const res = await axios.get('https://dorahacks.io/api/hackathon/list', {
-      params: { limit: 50, offset: 0, status: 'open,upcoming' },
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'Mozilla/5.0 (compatible; HackathonHub/1.0)',
-      },
-      timeout: 15000,
-    });
-
-    const hackathons: DoraHack[] = res.data?.data || res.data?.hackathons || res.data || [];
-
-    for (const h of hackathons) {
-      if (!h.key && !h.title) continue;
-
-      const mode = h.event_type === 'offline' ? 'offline' : h.event_type === 'hybrid' ? 'hybrid' : 'online';
-      const prizeText = h.prize_pool ? `${h.currency || '$'}${Number(h.prize_pool).toLocaleString()}` : null;
-      const sourceUrl = `https://dorahacks.io/hackathon/${h.key}`;
-
-      await db.from('hackathons').upsert(
-        {
-          title: h.title,
-          description: h.description?.slice(0, 500) || null,
-          image_url: h.cover_image_url || null,
-          source: 'dorahacks',
-          source_url: sourceUrl,
-          organizer: h.organizer_name || null,
-          prize_amount: prizeText,
-          tags: h.tags || [],
-          mode,
-          location: mode !== 'online' ? h.location || null : null,
-          participants_count: h.registrant_count || 0,
-          registration_deadline: h.registration_deadline || null,
-          updated_at: new Date().toISOString(),
+    while (true) {
+      const res = await axios.get('https://dorahacks.io/api/hackathon/list', {
+        params: { limit, offset, status: 'open,upcoming' },
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'Mozilla/5.0 (compatible; HackathonHub/1.0)',
         },
-        { onConflict: 'source_url', ignoreDuplicates: false }
-      );
-      total++;
+        timeout: 15000,
+      });
+
+      const hackathons: DoraHack[] = res.data?.data || res.data?.hackathons || res.data || [];
+      if (!Array.isArray(hackathons) || hackathons.length === 0) break;
+
+      for (const h of hackathons) {
+        if (!h.key && !h.title) continue;
+
+        const mode = h.event_type === 'offline' ? 'offline' : h.event_type === 'hybrid' ? 'hybrid' : 'online';
+        const prizeText = h.prize_pool ? `${h.currency || '$'}${Number(h.prize_pool).toLocaleString()}` : null;
+        const sourceUrl = `https://dorahacks.io/hackathon/${h.key}`;
+
+        await db.from('hackathons').upsert(
+          {
+            title: h.title,
+            description: h.description?.slice(0, 500) || null,
+            image_url: h.cover_image_url || null,
+            source: 'dorahacks',
+            source_url: sourceUrl,
+            organizer: h.organizer_name || null,
+            prize_amount: prizeText,
+            tags: h.tags || [],
+            mode,
+            location: mode !== 'online' ? h.location || null : null,
+            participants_count: h.registrant_count || 0,
+            registration_deadline: h.registration_deadline || null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'source_url', ignoreDuplicates: false }
+        );
+        total++;
+      }
+
+      if (hackathons.length < limit) break;
+      offset += limit;
+      if (offset >= 300) break; // cap at ~300 total
+
+      await new Promise((r) => setTimeout(r, 700));
     }
 
     return { success: true, count: total };

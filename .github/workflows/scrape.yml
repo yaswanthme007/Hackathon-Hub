@@ -8,10 +8,20 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Trigger scraper
         run: |
-          curl -X POST ${{ secrets.APP_URL }}/api/scrape \
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 290 \
+            -X POST "${{ secrets.APP_URL }}/api/scrape" \
             -H "Authorization: Bearer ${{ secrets.SCRAPE_SECRET }}" \
             -H "Content-Type: application/json" \
-            -d '{}'
+            -d '{}')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response: $BODY"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Scrape failed with status $HTTP_CODE"
+            exit 1
+          fi

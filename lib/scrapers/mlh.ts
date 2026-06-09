@@ -8,7 +8,7 @@ export async function scrapeMLH(): Promise<{ success: boolean; count?: number; e
     let total = 0;
 
     // MLH renders their hackathon list server-side on this endpoint
-    const res = await axios.get('https://mlh.io/seasons/2025/events', {
+    const res = await axios.get('https://mlh.io/seasons/2026/events', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         Accept: 'text/html',
