@@ -80,7 +80,7 @@ function BlurIn({ text, className, delay = 0 }: { text: string; className?: stri
   );
 }
 
-const SOURCE_LOGOS = ['Devpost', 'MLH', 'HackerEarth', 'Unstop', 'Devfolio', 'DoraHacks'];
+const SOURCE_LOGOS = ['Devpost', 'Unstop', 'HackerEarth'];
 
 export default function HomePage() {
   const { data: session } = useSession();
@@ -89,7 +89,7 @@ export default function HomePage() {
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState('');
   const [mode, setMode] = useState<FilterMode>('all');
-  const [sort, setSort] = useState<SortBy>('newest');
+  const [sort, setSort] = useState<SortBy>('deadline');
   const [deadline, setDeadline] = useState<DeadlineFilter>('all');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -265,7 +265,7 @@ export default function HomePage() {
             transition={{ delay: 0.62, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             className="text-zinc-500 text-lg max-w-xl leading-relaxed"
           >
-            Browse hackathons from every major platform — including Indian platforms like Devfolio, HackerEarth & Unstop. Sign in to track your journey.
+            Browse hackathons from Devpost, Unstop & HackerEarth — all in one place. Sign in to track your journey.
           </motion.p>
 
           {/* Search */}
@@ -321,7 +321,7 @@ export default function HomePage() {
           >
             {[
               { icon: Trophy, value: total, suffix: '', label: 'Live Hackathons' },
-              { icon: Globe, value: 6, suffix: '+', label: 'Sources' },
+              { icon: Globe, value: 3, suffix: '', label: 'Sources' },
               { icon: Sparkles, value: 500, suffix: 'K+', label: 'In Prizes' },
             ].map((s, i) => (
               <motion.div

@@ -7,11 +7,8 @@ import { Play, RefreshCw, CheckCircle2, Loader2, Database, Clock, Zap, AlertTria
 
 const SOURCES = [
   { id: 'devpost',      label: 'Devpost',      note: 'Public JSON API — most reliable' },
-  { id: 'devfolio',    label: 'Devfolio',     note: 'Public search API' },
-  { id: 'dorahacks',   label: 'DoraHacks',    note: 'Public hackathon listing API' },
-  { id: 'mlh',         label: 'MLH',          note: 'HTML scraping — may need updates' },
-  { id: 'hackerearth', label: 'HackerEarth',  note: 'Public challenge API' },
   { id: 'unstop',      label: 'Unstop',       note: 'Reverse-engineered API — may break' },
+  { id: 'hackerearth', label: 'HackerEarth',  note: 'Public challenge API' },
 ];
 
 interface ScrapeResult { success: boolean; count?: number; error?: string; }

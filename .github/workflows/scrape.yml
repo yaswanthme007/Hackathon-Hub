@@ -8,20 +8,31 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Trigger scraper
+      - name: Scrape each source
         run: |
-          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 290 \
-            -X POST "${{ secrets.APP_URL }}/api/scrape" \
-            -H "Authorization: Bearer ${{ secrets.SCRAPE_SECRET }}" \
-            -H "Content-Type: application/json" \
-            -d '{}')
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
-          echo "HTTP status: $HTTP_CODE"
-          echo "Response: $BODY"
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "Scrape failed with status $HTTP_CODE"
+          # Hit each source in its own request so a slow/failing source can't
+          # blow the whole serverless time budget — each source's upserts
+          # persist independently (insert new + update existing).
+          FAILED=0
+          for SOURCE in devpost unstop hackerearth; do
+            echo "=== Scraping $SOURCE ==="
+            RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 290 \
+              -X POST "${{ secrets.APP_URL }}/api/scrape" \
+              -H "Authorization: Bearer ${{ secrets.SCRAPE_SECRET }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"sources\":[\"$SOURCE\"]}")
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | head -n -1)
+            echo "HTTP status: $HTTP_CODE"
+            echo "Response: $BODY"
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "::warning::Scrape failed for $SOURCE (status $HTTP_CODE)"
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" != "0" ]; then
+            echo "One or more sources failed"
             exit 1
           fi

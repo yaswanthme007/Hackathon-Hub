@@ -47,27 +47,29 @@ export async function scrapeHackerEarth(): Promise<{ success: boolean; count?: n
       const challenges: HEChallenge[] = res.data?.objects || res.data?.results || [];
       if (challenges.length === 0) break;
 
-      for (const c of challenges) {
-        if (!c.title || !c.url) continue;
-        const sourceUrl = c.url.startsWith('http') ? c.url : `https://www.hackerearth.com${c.url}`;
+      // Build one batch per page and upsert in a single round-trip — per-row
+      // awaited upserts are what make the scrape time out on serverless.
+      const rows = challenges
+        .filter((c) => c.title && c.url)
+        .map((c) => {
+          const sourceUrl = c.url.startsWith('http') ? c.url : `https://www.hackerearth.com${c.url}`;
 
-        let mode: 'online' | 'offline' | 'hybrid' = 'online';
-        let location: string | null = null;
+          let mode: 'online' | 'offline' | 'hybrid' = 'online';
+          let location: string | null = null;
 
-        if (c.event_type === 'offline') {
-          mode = 'offline';
-        } else if (c.event_type === 'hybrid') {
-          mode = 'hybrid';
-        } else if (c.is_online === false) {
-          mode = 'offline';
-        }
+          if (c.event_type === 'offline') {
+            mode = 'offline';
+          } else if (c.event_type === 'hybrid') {
+            mode = 'hybrid';
+          } else if (c.is_online === false) {
+            mode = 'offline';
+          }
 
-        if (mode !== 'online') {
-          location = [c.city, c.country].filter(Boolean).join(', ') || c.location || null;
-        }
+          if (mode !== 'online') {
+            location = [c.city, c.country].filter(Boolean).join(', ') || c.location || null;
+          }
 
-        await db.from('hackathons').upsert(
-          {
+          return {
             title: c.title,
             description: c.description?.replace(/<[^>]+>/g, '').slice(0, 400) || null,
             image_url: c.cover_image || null,
@@ -82,10 +84,15 @@ export async function scrapeHackerEarth(): Promise<{ success: boolean; count?: n
             start_date: c.start_utc_timestamp || null,
             end_date: c.end_utc_timestamp || null,
             updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'source_url', ignoreDuplicates: false }
-        );
-        total++;
+          };
+        });
+
+      if (rows.length > 0) {
+        const { error } = await db
+          .from('hackathons')
+          .upsert(rows, { onConflict: 'source_url', ignoreDuplicates: false });
+        if (error) throw error;
+        total += rows.length;
       }
 
       if (challenges.length < limit) break;

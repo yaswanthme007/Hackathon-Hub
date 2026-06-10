@@ -17,6 +17,10 @@ export async function GET(req: NextRequest) {
   const db  = getSupabase();
   let query = db.from('hackathons').select('*', { count: 'exact' });
 
+  // Hide hackathons that have already ended (keep rows with unknown end_date).
+  const nowIso = new Date().toISOString();
+  query = query.or(`end_date.gte.${nowIso},end_date.is.null`);
+
   // Mode filter — "In-Person" shows offline + hybrid since both have physical components
   if (mode === 'offline') {
     query = query.or('mode.eq.offline,mode.eq.hybrid');

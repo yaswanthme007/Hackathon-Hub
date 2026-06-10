@@ -64,28 +64,28 @@ export async function scrapeUnstop(): Promise<{ success: boolean; count?: number
 
     const competitions = extractList(res.data);
 
-    for (const c of competitions) {
-      if (!c.title) continue;
+    // Build all rows, then upsert in a single round-trip. Per-row awaited
+    // upserts in a loop are what make the scrape time out on serverless.
+    const rows = competitions
+      .filter((c) => c.title)
+      .map((c) => {
+        const sourceUrl = `https://unstop.com/hackathons/${c.slug || c.uid}`;
 
-      const sourceUrl = `https://unstop.com/hackathons/${c.slug || c.uid}`;
-      const tags = c.tags?.map((t) => t.name) || [];
+        // Detect mode: prefer explicit type field, fall back to is_online
+        let mode: 'online' | 'offline' | 'hybrid' = 'online';
+        if (c.type === 'offline' || c.type === 'in-person') {
+          mode = 'offline';
+        } else if (c.type === 'hybrid') {
+          mode = 'hybrid';
+        } else if (c.is_online === false) {
+          mode = 'offline';
+        }
 
-      // Detect mode: prefer explicit type field, fall back to is_online
-      let mode: 'online' | 'offline' | 'hybrid' = 'online';
-      if (c.type === 'offline' || c.type === 'in-person') {
-        mode = 'offline';
-      } else if (c.type === 'hybrid') {
-        mode = 'hybrid';
-      } else if (c.is_online === false) {
-        mode = 'offline';
-      }
+        const location = mode !== 'online'
+          ? [c.city, c.country].filter(Boolean).join(', ') || null
+          : null;
 
-      const location = mode !== 'online'
-        ? [c.city, c.country].filter(Boolean).join(', ') || null
-        : null;
-
-      await db.from('hackathons').upsert(
-        {
+        return {
           title: c.title,
           description: c.short_description || null,
           image_url: c.cover_image || null,
@@ -93,7 +93,7 @@ export async function scrapeUnstop(): Promise<{ success: boolean; count?: number
           source_url: sourceUrl,
           organizer: c.organisation_title || null,
           prize_amount: c.prizes || null,
-          tags,
+          tags: c.tags?.map((t) => t.name) || [],
           mode,
           location,
           participants_count: c.registrations_count || 0,
@@ -101,10 +101,15 @@ export async function scrapeUnstop(): Promise<{ success: boolean; count?: number
           start_date: c.start_date || null,
           end_date: c.end_date || null,
           updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'source_url', ignoreDuplicates: false }
-      );
-      total++;
+        };
+      });
+
+    if (rows.length > 0) {
+      const { error } = await db
+        .from('hackathons')
+        .upsert(rows, { onConflict: 'source_url', ignoreDuplicates: false });
+      if (error) throw error;
+      total = rows.length;
     }
 
     return { success: true, count: total };

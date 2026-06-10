@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'HackathonHub — Discover & Track Hackathons',
-  description: 'Discover hackathons from Devpost, MLH, HackerEarth, and more. Track your registrations and shortlists.',
+  description: 'Discover hackathons from Devpost, Unstop & HackerEarth. Track your registrations and shortlists.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

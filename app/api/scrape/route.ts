@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeDevpost } from '@/lib/scrapers/devpost';
-import { scrapeDevfolio } from '@/lib/scrapers/devfolio';
-import { scrapeDoraHacks } from '@/lib/scrapers/dorahacks';
-import { scrapeMLH } from '@/lib/scrapers/mlh';
 import { scrapeUnstop } from '@/lib/scrapers/unstop';
 import { scrapeHackerEarth } from '@/lib/scrapers/hackerearth';
 
@@ -11,9 +8,6 @@ export const maxDuration = 300; // 5 min — scraping takes time
 
 const SCRAPERS: Record<string, () => Promise<{ success: boolean; count?: number; error?: string }>> = {
   devpost: scrapeDevpost,
-  devfolio: scrapeDevfolio,
-  dorahacks: scrapeDoraHacks,
-  mlh: scrapeMLH,
   unstop: scrapeUnstop,
   hackerearth: scrapeHackerEarth,
 };
