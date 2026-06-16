@@ -250,7 +250,7 @@ export default function HomePage() {
             <h1 className="block text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] text-white">
               <BlurIn text="Discover Every" delay={0.08} />
             </h1>
-            <h1 className="block text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] gradient-text">
+            <h1 className="block text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] text-white">
               <BlurIn text="Hackathon," delay={0.28} />
             </h1>
             <h1 className="block text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] text-white">
