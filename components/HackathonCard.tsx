@@ -2,7 +2,8 @@
 
 import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from 'framer-motion';
 import { MapPin, Users, Trophy, Bookmark, CheckCircle, ExternalLink, Globe, Building2, Clock } from 'lucide-react';
-import { Hackathon } from '@/types';
+import { Hackathon, ChatLink } from '@/types';
+import ChatLinksPanel from './ChatLinksPanel';
 import { formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
 import { useRef, useState, useCallback, useMemo } from 'react';
 
@@ -13,6 +14,9 @@ interface Props {
   onStatusChange: (id: string, status: 'registered' | 'shortlisted' | null) => void;
   onTagClick?: (tag: string) => void;
   index: number;
+  chatLinks?: ChatLink[];
+  onChatLinksUpdate?: (hackathonId: string, links: ChatLink[]) => void;
+  chatLinksSaving?: boolean;
 }
 
 const cardVariants = {
@@ -150,7 +154,7 @@ function ActionBtn({
   );
 }
 
-export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onStatusChange, onTagClick, index }: Props) {
+export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onStatusChange, onTagClick, index, chatLinks, onChatLinksUpdate, chatLinksSaving }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [imgError, setImgError] = useState(false);
   const mouseX = useMotionValue(0);
@@ -432,6 +436,15 @@ export default function HackathonCard({ hackathon, userStatus, isLoggedIn, onSta
             )}
           </div>
         </div>
+
+        {/* Chat links panel — only shown on dashboard */}
+        {chatLinks !== undefined && onChatLinksUpdate && (
+          <ChatLinksPanel
+            chatLinks={chatLinks}
+            onUpdate={(links) => onChatLinksUpdate(hackathon.id, links)}
+            saving={chatLinksSaving}
+          />
+        )}
       </div>
     </motion.div>
   );

@@ -6,11 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import StatsPanel from '@/components/StatsPanel';
 import HackathonCard from '@/components/HackathonCard';
+import TrackedHackathonCard from '@/components/TrackedHackathonCard';
+import AddHackathonModal from '@/components/AddHackathonModal';
 import SkeletonCard from '@/components/SkeletonCard';
-import { UserStats, Hackathon } from '@/types';
+import { UserStats, Hackathon, ChatLink, UserTrackedHackathon } from '@/types';
 import {
   Loader2, Bookmark, CheckCircle, Zap, ArrowRight,
-  Trophy, Star, Flame, Target,
+  Trophy, Star, Flame, Target, Plus, PlusCircle,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -18,11 +20,41 @@ import Link from 'next/link';
 interface UserHackathonRow {
   status: string;
   hackathon_id: string;
+  chat_links: ChatLink[];
   created_at: string;
   hackathons: Hackathon;
 }
 
-function EmptyState({ tab }: { tab: 'registered' | 'shortlisted' }) {
+type DashTab = 'registered' | 'shortlisted' | 'tracked';
+
+function EmptyState({ tab, onAdd }: { tab: DashTab; onAdd?: () => void }) {
+  const cfg = {
+    registered: {
+      color: '#10b981',
+      icon: CheckCircle,
+      title: 'No registered hackathons yet',
+      desc: 'Click the ✓ button on any hackathon card to mark it as registered.',
+      cta: 'Browse hackathons',
+      href: '/' as const,
+    },
+    shortlisted: {
+      color: '#a78bfa',
+      icon: Bookmark,
+      title: 'No shortlisted hackathons yet',
+      desc: 'Click the bookmark icon on any card to save it for later.',
+      cta: 'Browse hackathons',
+      href: '/' as const,
+    },
+    tracked: {
+      color: '#38bdf8',
+      icon: PlusCircle,
+      title: 'No externally tracked hackathons',
+      desc: 'Add hackathons from Unstop, Devfolio, or any other platform and track your application status.',
+      cta: 'Track a Hackathon',
+      href: null as null,
+    },
+  };
+  const c = cfg[tab];
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -32,39 +64,38 @@ function EmptyState({ tab }: { tab: 'registered' | 'shortlisted' }) {
     >
       <motion.div
         className="w-20 h-20 rounded-3xl flex items-center justify-center"
-        style={{
-          background: tab === 'registered' ? 'rgba(16,185,129,0.1)' : 'rgba(124,58,237,0.1)',
-          border: `1px solid ${tab === 'registered' ? 'rgba(16,185,129,0.2)' : 'rgba(124,58,237,0.2)'}`,
-        }}
+        style={{ background: c.color + '12', border: `1px solid ${c.color}28` }}
         animate={{ y: [0, -6, 0] }}
         transition={{ duration: 3, repeat: Infinity }}
       >
-        {tab === 'registered'
-          ? <CheckCircle size={32} className="text-emerald-400/60" />
-          : <Bookmark size={32} className="text-violet-400/60" />}
+        <c.icon size={32} style={{ color: c.color + '99' }} />
       </motion.div>
-
       <div className="text-center">
-        <p className="text-white font-bold text-lg mb-1">
-          No {tab === 'registered' ? 'registered' : 'shortlisted'} hackathons yet
-        </p>
-        <p className="text-zinc-500 text-sm max-w-xs">
-          {tab === 'registered'
-            ? 'Click the ✓ button on a hackathon card to mark it as registered'
-            : 'Click the bookmark icon on any card to save it for later'}
-        </p>
+        <p className="text-white font-bold text-lg mb-1">{c.title}</p>
+        <p className="text-zinc-500 text-sm max-w-xs">{c.desc}</p>
       </div>
-
-      <Link href="/">
-        <motion.div
-          className="flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-full text-violet-300"
-          style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.25)' }}
-          whileHover={{ scale: 1.04, backgroundColor: 'rgba(124,58,237,0.22)' }}
+      {c.href ? (
+        <Link href={c.href}>
+          <motion.div
+            className="flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-full"
+            style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.25)', color: '#c4b5fd' }}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+          >
+            {c.cta} <ArrowRight size={14} />
+          </motion.div>
+        </Link>
+      ) : (
+        <motion.button
+          onClick={onAdd}
+          className="flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-full"
+          style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.25)', color: '#7dd3fc' }}
+          whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
         >
-          Browse hackathons <ArrowRight size={14} />
-        </motion.div>
-      </Link>
+          <Plus size={14} /> {c.cta}
+        </motion.button>
+      )}
     </motion.div>
   );
 }
@@ -73,16 +104,12 @@ function AchievementBadge({ icon: Icon, label, color, unlocked }: {
   icon: React.ElementType; label: string; color: string; unlocked: boolean;
 }) {
   return (
-    <motion.div
-      className="flex flex-col items-center gap-1.5"
-      whileHover={{ scale: 1.05 }}
-    >
+    <motion.div className="flex flex-col items-center gap-1.5" whileHover={{ scale: 1.05 }}>
       <div
         className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300"
         style={unlocked
           ? { background: color + '20', border: `1px solid ${color}40` }
-          : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }
-        }
+          : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
       >
         <Icon size={18} style={{ color: unlocked ? color : '#3f3f46' }} />
       </div>
@@ -93,31 +120,42 @@ function AchievementBadge({ icon: Icon, label, color, unlocked }: {
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
-  const [stats, setStats] = useState<UserStats>({ registered: 0, shortlisted: 0, total: 0 });
+  const [stats, setStats]           = useState<UserStats>({ registered: 0, shortlisted: 0, tracked: 0, total: 0 });
   const [registered, setRegistered] = useState<UserHackathonRow[]>([]);
   const [shortlisted, setShortlisted] = useState<UserHackathonRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'registered' | 'shortlisted'>('registered');
+  const [tracked, setTracked]       = useState<UserTrackedHackathon[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [activeTab, setActiveTab]   = useState<DashTab>('registered');
   const [userStatusMap, setUserStatusMap] = useState<Record<string, 'registered' | 'shortlisted'>>({});
+  const [chatLinksMap, setChatLinksMap]   = useState<Record<string, ChatLink[]>>({});
+  const [savingChatFor, setSavingChatFor] = useState<string | null>(null);
+  const [modalOpen, setModalOpen]   = useState(false);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     if (!session) return;
     setLoading(true);
     fetch('/api/user/stats')
       .then((r) => r.json())
       .then((d) => {
-        setStats(d.stats || { registered: 0, shortlisted: 0, total: 0 });
+        setStats(d.stats || { registered: 0, shortlisted: 0, tracked: 0, total: 0 });
         setRegistered(d.registered || []);
         setShortlisted(d.shortlisted || []);
-        const map: Record<string, 'registered' | 'shortlisted'> = {};
+        setTracked(d.tracked || []);
+
+        const statusMap: Record<string, 'registered' | 'shortlisted'> = {};
+        const linksMap:  Record<string, ChatLink[]> = {};
         [...(d.registered || []), ...(d.shortlisted || [])].forEach((row: UserHackathonRow) => {
-          map[row.hackathon_id] = row.status as 'registered' | 'shortlisted';
+          statusMap[row.hackathon_id] = row.status as 'registered' | 'shortlisted';
+          linksMap[row.hackathon_id]  = row.chat_links || [];
         });
-        setUserStatusMap(map);
+        setUserStatusMap(statusMap);
+        setChatLinksMap(linksMap);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [session]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleStatusChange = useCallback(async (hackathonId: string, newStatus: 'registered' | 'shortlisted' | null) => {
     if (!session) return;
@@ -130,7 +168,7 @@ export default function DashboardPage() {
       setShortlisted((r) => r.filter((h) => h.hackathon_id !== hackathonId));
       setStats((s) => ({
         ...s,
-        registered: prev[hackathonId] === 'registered' ? s.registered - 1 : s.registered,
+        registered:  prev[hackathonId] === 'registered'  ? s.registered  - 1 : s.registered,
         shortlisted: prev[hackathonId] === 'shortlisted' ? s.shortlisted - 1 : s.shortlisted,
         total: s.total - 1,
       }));
@@ -145,6 +183,32 @@ export default function DashboardPage() {
       }
     } catch { setUserStatusMap(prev); }
   }, [session, userStatusMap]);
+
+  const handleChatLinksUpdate = useCallback(async (hackathonId: string, links: ChatLink[]) => {
+    setChatLinksMap((m) => ({ ...m, [hackathonId]: links }));
+    setSavingChatFor(hackathonId);
+    try {
+      await fetch('/api/user/chat-links', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hackathon_id: hackathonId, chat_links: links }),
+      });
+    } finally { setSavingChatFor(null); }
+  }, []);
+
+  const handleTrackedUpdate = useCallback((id: string, patch: Partial<UserTrackedHackathon>) => {
+    setTracked((items) => items.map((t) => t.id === id ? { ...t, ...patch } : t));
+  }, []);
+
+  const handleTrackedDelete = useCallback((id: string) => {
+    setTracked((items) => items.filter((t) => t.id !== id));
+    setStats((s) => ({ ...s, tracked: s.tracked - 1, total: s.total - 1 }));
+  }, []);
+
+  const handleTrackedSaved = useCallback((item: UserTrackedHackathon) => {
+    setTracked((items) => [item, ...items]);
+    setStats((s) => ({ ...s, tracked: s.tracked + 1, total: s.total + 1 }));
+  }, []);
 
   /* ── Loading screen ── */
   if (status === 'loading') {
@@ -172,12 +236,7 @@ export default function DashboardPage() {
           >
             <Zap size={30} className="text-violet-400" />
           </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-center"
-          >
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-center">
             <h2 className="text-2xl font-black text-white mb-2">Your Dashboard</h2>
             <p className="text-zinc-400 text-sm max-w-xs">Sign in to track registrations, shortlists, and your hackathon journey.</p>
           </motion.div>
@@ -198,19 +257,27 @@ export default function DashboardPage() {
     );
   }
 
-  const activeRows = activeTab === 'registered' ? registered : shortlisted;
   const achievements = [
-    { icon: Star, label: 'First Hack', color: '#f59e0b', unlocked: stats.total >= 1 },
-    { icon: Flame, label: 'On Fire', color: '#ef4444', unlocked: stats.registered >= 3 },
-    { icon: Target, label: 'Focused', color: '#38bdf8', unlocked: stats.shortlisted >= 5 },
-    { icon: Trophy, label: 'Champion', color: '#a78bfa', unlocked: stats.registered >= 10 },
+    { icon: Star,   label: 'First Hack', color: '#f59e0b', unlocked: stats.total >= 1 },
+    { icon: Flame,  label: 'On Fire',    color: '#ef4444', unlocked: stats.registered >= 3 },
+    { icon: Target, label: 'Focused',    color: '#38bdf8', unlocked: stats.shortlisted >= 5 },
+    { icon: Trophy, label: 'Champion',   color: '#a78bfa', unlocked: stats.registered >= 10 },
   ];
+
+  const TABS: { key: DashTab; label: string; icon: React.ElementType; count: number; color: string }[] = [
+    { key: 'registered',  label: 'Registered', icon: CheckCircle, count: stats.registered,  color: '#10b981' },
+    { key: 'shortlisted', label: 'Shortlisted', icon: Bookmark,    count: stats.shortlisted, color: '#a78bfa' },
+    { key: 'tracked',     label: 'Applied',     icon: PlusCircle,  count: stats.tracked,     color: '#38bdf8' },
+  ];
+
+  const activeRegistered  = registered;
+  const activeShortlisted = shortlisted;
 
   return (
     <div className="min-h-screen noise" style={{ background: '#07070f' }}>
       <Navbar />
 
-      {/* Dashboard header banner */}
+      {/* Dashboard header */}
       <div className="relative pt-20 pb-10 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="absolute inset-0 grid-bg opacity-40" />
         <div className="absolute top-0 left-1/4 w-96 h-40 bg-violet-500/8 rounded-full blur-3xl" />
@@ -244,30 +311,36 @@ export default function DashboardPage() {
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-[#07070f]" />
             </motion.div>
 
-            {/* Name & email */}
-            <motion.div
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.08 }}
-            >
-              <h1 className="text-2xl font-black text-white">
-                {session.user?.name?.split(' ')[0]}&apos;s Dashboard
-              </h1>
+            {/* Name */}
+            <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.08 }}>
+              <h1 className="text-2xl font-black text-white">{session.user?.name?.split(' ')[0]}&apos;s Dashboard</h1>
               <p className="text-zinc-500 text-sm mt-0.5">{session.user?.email}</p>
             </motion.div>
 
-            {/* Achievements */}
+            {/* Right side: Track button + Achievements */}
             <motion.div
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.15 }}
-              className="sm:ml-auto flex items-center gap-3"
+              className="sm:ml-auto flex items-center gap-4 flex-wrap"
             >
-              <span className="text-xs text-zinc-600 font-medium hidden sm:block">Achievements</span>
-              <div className="flex items-center gap-2">
-                {achievements.map((a) => (
-                  <AchievementBadge key={a.label} {...a} />
-                ))}
+              {/* Track Hackathon button */}
+              <motion.button
+                onClick={() => setModalOpen(true)}
+                className="flex items-center gap-2 text-[13px] font-bold px-4 py-2.5 rounded-2xl text-white"
+                style={{ background: 'linear-gradient(135deg, rgba(56,189,248,0.25), rgba(14,165,233,0.15))', border: '1px solid rgba(56,189,248,0.35)' }}
+                whileHover={{ scale: 1.04, boxShadow: '0 0 24px rgba(56,189,248,0.2)' }}
+                whileTap={{ scale: 0.96 }}
+              >
+                <Plus size={14} />
+                Track Hackathon
+              </motion.button>
+
+              <div className="hidden sm:flex items-center gap-3">
+                <span className="text-xs text-zinc-600 font-medium">Achievements</span>
+                <div className="flex items-center gap-2">
+                  {achievements.map((a) => <AchievementBadge key={a.label} {...a} />)}
+                </div>
               </div>
             </motion.div>
           </div>
@@ -276,16 +349,11 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-24">
         {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
           <StatsPanel stats={stats} />
         </motion.div>
 
-        {/* Progress bar + breakdown */}
+        {/* Progress bar */}
         {stats.total > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -298,8 +366,6 @@ export default function DashboardPage() {
               <p className="text-sm font-semibold text-zinc-300">Progress Breakdown</p>
               <span className="text-xs text-zinc-600">{stats.total} total tracked</span>
             </div>
-
-            {/* Segmented bar */}
             <div className="flex gap-0.5 h-2.5 rounded-full overflow-hidden bg-white/5">
               {stats.registered > 0 && (
                 <motion.div
@@ -317,12 +383,20 @@ export default function DashboardPage() {
                   className="bg-gradient-to-r from-violet-500 to-indigo-500"
                 />
               )}
+              {stats.tracked > 0 && (
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(stats.tracked / stats.total) * 100}%` }}
+                  transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+                  className="bg-gradient-to-r from-sky-500 to-cyan-400"
+                />
+              )}
             </div>
-
-            <div className="flex items-center gap-5 mt-3">
+            <div className="flex items-center gap-5 mt-3 flex-wrap">
               {[
-                { color: 'bg-emerald-500', label: 'Registered', count: stats.registered },
-                { color: 'bg-violet-500', label: 'Shortlisted', count: stats.shortlisted },
+                { color: 'bg-emerald-500', label: 'Registered',     count: stats.registered  },
+                { color: 'bg-violet-500',  label: 'Shortlisted',    count: stats.shortlisted },
+                { color: 'bg-sky-500',     label: 'Applied/Ext',    count: stats.tracked     },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-2">
                   <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
@@ -345,10 +419,7 @@ export default function DashboardPage() {
           className="flex items-center gap-1 p-1 rounded-2xl w-fit mb-7"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
         >
-          {([
-            { key: 'registered' as const, label: 'Registered', icon: CheckCircle, count: stats.registered, color: '#10b981' },
-            { key: 'shortlisted' as const, label: 'Shortlisted', icon: Bookmark, count: stats.shortlisted, color: '#a78bfa' },
-          ] as const).map((tab) => (
+          {TABS.map((tab) => (
             <motion.button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
@@ -372,8 +443,7 @@ export default function DashboardPage() {
                 className="relative z-10 text-[11px] font-bold px-2 py-0.5 rounded-full min-w-[22px] text-center"
                 style={activeTab === tab.key
                   ? { background: tab.color + '25', color: tab.color }
-                  : { background: 'rgba(255,255,255,0.04)', color: '#52525b' }
-                }
+                  : { background: 'rgba(255,255,255,0.04)', color: '#52525b' }}
               >
                 {tab.count}
               </motion.span>
@@ -381,7 +451,7 @@ export default function DashboardPage() {
           ))}
         </motion.div>
 
-        {/* Cards */}
+        {/* Content */}
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div
@@ -393,8 +463,45 @@ export default function DashboardPage() {
             >
               {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} index={i} />)}
             </motion.div>
-          ) : activeRows.length === 0 ? (
-            <EmptyState key="empty" tab={activeTab} />
+          ) : activeTab === 'tracked' ? (
+            tracked.length === 0 ? (
+              <EmptyState key="empty-tracked" tab="tracked" onAdd={() => setModalOpen(true)} />
+            ) : (
+              <motion.div
+                key="tracked"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3 }}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              >
+                {/* Add another button */}
+                <motion.button
+                  onClick={() => setModalOpen(true)}
+                  className="rounded-2xl flex flex-col items-center justify-center gap-3 py-12 transition-all"
+                  style={{ background: 'rgba(56,189,248,0.04)', border: '2px dashed rgba(56,189,248,0.2)', color: '#38bdf8' }}
+                  whileHover={{ scale: 1.02, borderColor: 'rgba(56,189,248,0.4)', background: 'rgba(56,189,248,0.08)' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Plus size={22} />
+                  <span className="text-[12px] font-semibold">Track Another</span>
+                </motion.button>
+
+                <AnimatePresence>
+                  {tracked.map((item, i) => (
+                    <TrackedHackathonCard
+                      key={item.id}
+                      item={item}
+                      index={i}
+                      onDelete={handleTrackedDelete}
+                      onUpdate={handleTrackedUpdate}
+                    />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            )
+          ) : (activeTab === 'registered' ? activeRegistered : activeShortlisted).length === 0 ? (
+            <EmptyState key={`empty-${activeTab}`} tab={activeTab} />
           ) : (
             <motion.div
               key={activeTab}
@@ -404,7 +511,7 @@ export default function DashboardPage() {
               transition={{ duration: 0.3 }}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
             >
-              {activeRows.map((row, i) => (
+              {(activeTab === 'registered' ? activeRegistered : activeShortlisted).map((row, i) => (
                 <HackathonCard
                   key={row.hackathon_id}
                   hackathon={row.hackathons}
@@ -412,12 +519,21 @@ export default function DashboardPage() {
                   isLoggedIn={true}
                   onStatusChange={handleStatusChange}
                   index={i}
+                  chatLinks={chatLinksMap[row.hackathon_id] || []}
+                  onChatLinksUpdate={handleChatLinksUpdate}
+                  chatLinksSaving={savingChatFor === row.hackathon_id}
                 />
               ))}
             </motion.div>
           )}
         </AnimatePresence>
       </main>
+
+      <AddHackathonModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSaved={handleTrackedSaved}
+      />
     </div>
   );
 }

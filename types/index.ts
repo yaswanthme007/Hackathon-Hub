@@ -25,6 +25,7 @@ export interface UserHackathon {
   hackathon_id: string;
   status: 'registered' | 'shortlisted';
   notes: string | null;
+  chat_links: ChatLink[];
   created_at: string;
   hackathon?: Hackathon;
 }
@@ -32,7 +33,45 @@ export interface UserHackathon {
 export interface UserStats {
   registered: number;
   shortlisted: number;
+  tracked: number;
   total: number;
+}
+
+export type ApplicationStatus =
+  | 'shortlisted'
+  | 'applied'
+  | 'org_shortlisted'
+  | 'accepted'
+  | 'rejected';
+
+export interface ChatLink {
+  id: string;
+  url: string;
+  label: string;
+  platform: 'chatgpt' | 'claude' | 'other';
+}
+
+export interface UserTrackedHackathon {
+  id: string;
+  user_id: string;
+  title: string;
+  url: string | null;
+  organizer: string | null;
+  platform: string;
+  registration_deadline: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  prize_amount: string | null;
+  mode: 'online' | 'offline' | 'hybrid';
+  location: string | null;
+  tags: string[];
+  description: string | null;
+  image_url: string | null;
+  application_status: ApplicationStatus;
+  chat_links: ChatLink[];
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export type FilterMode = 'all' | 'online' | 'offline' | 'hybrid';
